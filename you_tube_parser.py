@@ -1,5 +1,9 @@
 import os
 from googleapiclient.discovery import build
+import telebot
+
+token = os.environ.get('api_motivation')  # api токен установлен в переменные окружения пк
+bot = telebot.TeleBot(token)
 
 api_key = os.environ.get('api_you')  # апи ключ ютуба установлен в переменные окружения пк
 
@@ -26,6 +30,16 @@ def search_youtube_videos(query, api_key=api_key, max_results=5):
     return videos
 
 
+def url_youtube(message, bot=None):
+    user_text = message.text.split()
+    if len(user_text) == 1:
+        bot.send_message(message.chat.id, "Вы не указали поисковой запрос.")
+    else:
+        search_query = " ".join(user_text)
+
+        video_links = search_youtube_videos(search_query)
+        for video in video_links:
+            bot.send_message(message.chat.id, f'{video["title"]}\n{video["url"]}')
 # if __name__ == "__main__":
 #     # api_key = os.environ.get('api_you')
 #     query = "как научится программировать"
