@@ -32,7 +32,7 @@ def search_youtube_videos(query, api_key=api_key, max_results=5):
 
 def url_youtube(message, bot=None):
     user_text = message.text.split()
-    if len(user_text) == 1:
+    if len(user_text) < 1:
         bot.send_message(message.chat.id, "Вы не указали поисковой запрос.")
     else:
         search_query = " ".join(user_text)

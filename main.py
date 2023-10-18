@@ -13,17 +13,17 @@ bot = telebot.TeleBot(token)
 def start_message(message):
     bot.send_message(message.chat.id, "Привет ✌️ ")
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn1 = types.KeyboardButton("🤑 Цитата Forbes")
-    btn2 = types.KeyboardButton("Поиск-Youtube")
+    btn1 = types.KeyboardButton("🤑  Цитата Forbes")
+    btn2 = types.KeyboardButton("🎥  Поиск-Youtube")
     markup.add(btn1, btn2)
     bot.send_message(message.chat.id, "Выберите действие:", reply_markup=markup)
 
 
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
-    if message.text == "🤑 Цитата Forbes":
+    if message.text == "🤑  Цитата Forbes":
         bot.send_message(message.chat.id, parser_bot())
-    elif message.text == "Поиск-Youtube":
+    elif message.text == "🎥  Поиск-Youtube":
         bot.send_message(message.chat.id, "Введите поисковой запрос для YouTube")
         bot.register_next_step_handler(message, url_youtube, bot)
 
