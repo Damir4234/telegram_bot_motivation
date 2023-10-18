@@ -8,7 +8,7 @@ bot = telebot.TeleBot(token)
 api_key = os.environ.get('api_you')  # апи ключ ютуба установлен в переменные окружения пк
 
 
-def search_youtube_videos(query, api_key=api_key, max_results=5):
+def search_youtube_videos(query, api_key=api_key, max_results=3):
     youtube = build('youtube', 'v3', developerKey=api_key)
 
     search_response = youtube.search().list(
@@ -40,11 +40,4 @@ def url_youtube(message, bot=None):
         video_links = search_youtube_videos(search_query)
         for video in video_links:
             bot.send_message(message.chat.id, f'{video["title"]}\n{video["url"]}')
-# if __name__ == "__main__":
-#     # api_key = os.environ.get('api_you')
-#     query = "как научится программировать"
-#     results = search_youtube_videos(query, api_key)
-#
-#     for index, video in enumerate(results, start=1):
-#         print(f'{index}. {video["title"]}')
-#         print(f'   URL: {video["url"]}')
+
