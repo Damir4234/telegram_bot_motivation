@@ -6,11 +6,11 @@ from you_tube_parser import url_youtube
 import psycopg2
 
 db_params = {
-    'dbname': 'your_database_name',
-    'user': 'your_database_user',
-    'password': 'your_database_password',
-    'host': 'your_database_host',
-    'port': 'your_database_port'
+    'dbname': 'postgres',
+    'user': 'postgres',
+    'password': '050822',
+    'host': 'localhost',
+    'port': '5432'
 }
 
 token = os.environ.get('api_motivation')  # api токен установлен в переменные окружения пк
@@ -24,7 +24,8 @@ def start_message(message):
     btn1 = types.KeyboardButton("🤑  Цитата Forbes")
     btn2 = types.KeyboardButton("🎥  Поиск-Youtube")
     btn3 = types.KeyboardButton("Заметка")
-    markup.add(btn1, btn2, btn3)
+    btn4 = types.KeyboardButton("Мои заметки")
+    markup.add(btn1, btn2, btn3, btn4)
     bot.send_message(message.chat.id, "Выберите действие:", reply_markup=markup)
 
 
@@ -38,15 +39,38 @@ def handle_text(message):
     elif message.text == "Заметка":
         bot.send_message(message.chat.id, "Введите текст заметки")
         bot.register_next_step_handler(message, add_note)
+    elif message.text == "Мои заметки":
+        bot.register_next_step_handler(message, view_notes)
 
 
 @bot.message_handler(func=lambda message: True)
 def add_note(message):
     user_id = message.from_user.id
-    user_note = message.text  # Используйте message.text напрямую
-    with open(f'notes_{user_id}.txt', 'a') as file:
-        file.write(user_note + '\t\n')
-    bot.send_message(message.chat.id, "Заметка добавлена!")
+    user_note = message.text
+    conn = psycopg2.connect(**db_params)
+    cursor = conn.cursor()
+    insert_query = "INSERT INTO notes (user_id, note_text) VALUES (%s, %s)"
+    cursor.execute(insert_query, (user_id, user_note))
+    conn.commit()
+    conn.close()
+    bot.send_message(message.chat.id, "Заметка добавлена в базу данных!")
+
+
+@bot.message_handler(commands=['view_notes'])
+def view_notes(message):
+    user_id = message.from_user.id
+    conn = psycopg2.connect(**db_params)
+    cursor = conn.cursor()
+    cursor.execute("SELECT note_text FROM notes WHERE user_id = %s", (user_id,))
+    notes = cursor.fetchall()
+    conn.close()
+    if notes:
+        notes_text = "\n".join([note[0] for note in notes])
+        bot.send_message(message.chat.id, "Ваши заметки:\n" + notes_text)
+    else:
+        bot.send_message(message.chat.id, "У вас пока нет заметок.")
+
+    bot.register_next_step_handler(message, handle_text)
 
 
 bot.infinity_polling()
