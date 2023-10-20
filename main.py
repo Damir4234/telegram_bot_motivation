@@ -23,9 +23,10 @@ def start_message(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("🤑  Цитата Forbes")
     btn2 = types.KeyboardButton("🎥  Поиск-Youtube")
-    btn3 = types.KeyboardButton("Заметка")
-    btn4 = types.KeyboardButton("Мои заметки")
-    markup.add(btn1, btn2, btn3, btn4)
+    btn3 = types.KeyboardButton("📝  Запомнить заметку")
+    btn4 = types.KeyboardButton("📝  Мои заметки")
+    btn5 = types.KeyboardButton("❌  Удалить заметку")
+    markup.add(btn1, btn2, btn3, btn4, btn5)
     bot.send_message(message.chat.id, "Выберите действие:", reply_markup=markup)
 
 
@@ -36,11 +37,13 @@ def handle_text(message):
     elif message.text == "🎥  Поиск-Youtube":
         bot.send_message(message.chat.id, "Введите поисковой запрос для YouTube")
         bot.register_next_step_handler(message, url_youtube, bot)
-    elif message.text == "Заметка":
+    elif message.text == "📝  Запомнить заметку":
         bot.send_message(message.chat.id, "Введите текст заметки")
         bot.register_next_step_handler(message, add_note)
-    elif message.text == "Мои заметки":
+    elif message.text == "📝  Мои заметки":
         view_notes(message)
+    elif message.text == "❌  Удалить заметку":
+        delete_note_prompt(message)
 
 
 @bot.message_handler(func=lambda message: True)
@@ -49,8 +52,17 @@ def add_note(message):
     user_note = message.text
     conn = psycopg2.connect(**db_params)
     cursor = conn.cursor()
-    insert_query = "INSERT INTO notes (user_id, note_text) VALUES (%s, %s)"
-    cursor.execute(insert_query, (user_id, user_note))
+    user_table_name = f'user_{user_id}'
+
+    cursor.execute(f"SELECT MAX(note_id) FROM {user_table_name}")
+    max_note_id = cursor.fetchone()[0]
+
+    if max_note_id is None:
+        max_note_id = 0
+
+    next_note_id = max_note_id + 1
+    insert_query = f"INSERT INTO {user_table_name} (note_id, note_text) VALUES (%s, %s)"
+    cursor.execute(insert_query, (next_note_id, user_note))
     conn.commit()
     conn.close()
     bot.send_message(message.chat.id, "Заметка добавлена в базу данных!")
@@ -61,16 +73,53 @@ def view_notes(message):
     user_id = message.from_user.id
     conn = psycopg2.connect(**db_params)
     cursor = conn.cursor()
-    cursor.execute("SELECT note_text FROM notes WHERE user_id = %s", (user_id,))
+
+    user_table_name = f'user_{user_id}'
+
+    cursor.execute(f"SELECT note_id, note_text FROM {user_table_name}")
     notes = cursor.fetchall()
     conn.close()
 
     if notes:
-
-        notes_text = "\n".join([note[0] for note in notes])
+        notes_text = "\n".join([f"{note[0]}. {note[1]}" for note in notes])
         bot.send_message(message.chat.id, "Ваши заметки:\n" + notes_text)
     else:
         bot.send_message(message.chat.id, "У вас пока нет заметок.")
+
+
+@bot.message_handler(commands=['delete_note'])
+def delete_note_prompt(message):
+    bot.send_message(message.chat.id, "Введите номер заметки, которую хотите удалить:")
+    bot.register_next_step_handler(message, delete_note)
+
+
+def delete_note(message):
+    try:
+        note_id_to_delete = int(message.text)
+        user_id = message.from_user.id
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+
+        user_table_name = f'user_{user_id}'
+
+        cursor.execute(f"SELECT note_id FROM {user_table_name} WHERE note_id = %s", (note_id_to_delete,))
+        existing_note = cursor.fetchone()
+
+        if existing_note:
+
+            cursor.execute(f"DELETE FROM {user_table_name} WHERE note_id = %s", (note_id_to_delete,))
+            conn.commit()
+
+            cursor.execute(f"UPDATE {user_table_name} SET note_id = note_id - 1 WHERE note_id > %s",
+                           (note_id_to_delete,))
+            conn.commit()
+
+            conn.close()
+            bot.send_message(message.chat.id, "Заметка была удалена!")
+        else:
+            bot.send_message(message.chat.id, "Заметка с указанным номером не найдена.")
+    except ValueError:
+        bot.send_message(message.chat.id, "Номер заметки должен быть числом.")
 
 
 bot.infinity_polling()
