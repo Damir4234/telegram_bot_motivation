@@ -40,7 +40,7 @@ def handle_text(message):
         bot.send_message(message.chat.id, "Введите текст заметки")
         bot.register_next_step_handler(message, add_note)
     elif message.text == "Мои заметки":
-        bot.register_next_step_handler(message, view_notes)
+        view_notes(message)
 
 
 @bot.message_handler(func=lambda message: True)
@@ -64,13 +64,13 @@ def view_notes(message):
     cursor.execute("SELECT note_text FROM notes WHERE user_id = %s", (user_id,))
     notes = cursor.fetchall()
     conn.close()
+
     if notes:
+
         notes_text = "\n".join([note[0] for note in notes])
         bot.send_message(message.chat.id, "Ваши заметки:\n" + notes_text)
     else:
         bot.send_message(message.chat.id, "У вас пока нет заметок.")
-
-    bot.register_next_step_handler(message, handle_text)
 
 
 bot.infinity_polling()
