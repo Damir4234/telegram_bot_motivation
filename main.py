@@ -16,9 +16,22 @@ db_params = {
 token = os.environ.get('api_motivation')  # api токен установлен в переменные окружения пк
 bot = telebot.TeleBot(token)
 
-
+def table_exists(cursor, table_name):
+    cursor.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = %s);", (table_name,))
+    return cursor.fetchone()[0]
 @bot.message_handler(commands=['start'])
 def start_message(message):
+    user_id = message.from_user.id
+    conn = psycopg2.connect(**db_params)
+    cursor = conn.cursor()
+    user_table_name = f'user_{user_id}'
+
+    # Check if the user-specific table exists
+    if not table_exists(cursor, user_table_name):
+        # If the table doesn't exist, create it
+        cursor.execute(f"CREATE TABLE {user_table_name} (note_id serial PRIMARY KEY, note_text text);")
+        conn.commit()
+
     bot.send_message(message.chat.id, "Привет ✌️ ")
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("🤑  Цитата Forbes")
@@ -44,6 +57,8 @@ def handle_text(message):
         view_notes(message)
     elif message.text == "❌  Удалить заметку":
         delete_note_prompt(message)
+    else:
+        bot.send_message(message.chat.id, "Выберите команду из меню, используя кнопки ниже👇👇👇")
 
 
 @bot.message_handler(func=lambda message: True)
