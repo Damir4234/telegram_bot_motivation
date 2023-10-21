@@ -4,6 +4,9 @@ import os
 from forbes_parser import parser_bot
 from you_tube_parser import url_youtube
 import psycopg2
+import re
+import schedule
+import time
 
 db_params = {
     'dbname': 'postgres',
@@ -16,9 +19,12 @@ db_params = {
 token = os.environ.get('api_motivation')  # api токен установлен в переменные окружения пк
 bot = telebot.TeleBot(token)
 
+
 def table_exists(cursor, table_name):
     cursor.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = %s);", (table_name,))
     return cursor.fetchone()[0]
+
+
 @bot.message_handler(commands=['start'])
 def start_message(message):
     user_id = message.from_user.id
