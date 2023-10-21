@@ -4,9 +4,6 @@ import os
 from forbes_parser import parser_bot
 from you_tube_parser import url_youtube
 import psycopg2
-import re
-import schedule
-import time
 
 db_params = {
     'dbname': 'postgres',
